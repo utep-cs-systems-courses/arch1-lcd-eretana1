@@ -1,5 +1,6 @@
 #include <msp430.h>
 #include <libTimer.h>
+#include "buzzer.h"
 #include "lcdutils.h"
 #include "lcddraw.h"
 
@@ -50,11 +51,13 @@ short velocity[2] = {3,8}, limits[2] = {screenWidth-36, screenHeight-8};
 
 short redrawScreen = 1;
 u_int controlFontColor = COLOR_GREEN;
-
+int blink_count = 0;
 void wdt_c_handler()
 {
   static int secCount = 0;
-
+  if(SW1 & SWITCHES) blink_count++;
+  if (blink_count >= 4000) blink_count = 0;
+  
   secCount ++;
   if (secCount >= 25) {		/* 10/sec */
     secCount = 0;
@@ -63,20 +66,23 @@ void wdt_c_handler()
 }
   
 void update_shape();
+void draw_star(unsigned char col, unsigned char row, char openPresent);
+void open_top(int leftWallPos[], int rightWallPos[], char presentHeight, char rowStep);
+void write_happyBday(unsigned char col, unsigned char row);
 
 void main()
 {
-  
   P1DIR |= LED;		/**< Green led on when CPU on */
   P1OUT |= LED;
   configureClocks();
   lcd_init();
   switch_init();
+  buzzer_init();
   
   enableWDTInterrupts();      /**< enable periodic interrupt */
   or_sr(0x8);	              /**< GIE (enable interrupts) */
   
-  clearScreen(COLOR_BLUE);
+  clearScreen(COLOR_BLACK);
   while (1) {			/* forever */
     if (redrawScreen) {
       redrawScreen = 0;
@@ -87,45 +93,92 @@ void main()
     P1OUT |= LED;	/* led on */
   }
 }
-
-    
     
 void
 update_shape()
 {
   static unsigned char row = screenHeight / 2, col = screenWidth / 2;
   static char blue = 31, green = 0, red = 31;
-  static unsigned char step = 0;
-  static int colStep = 5, rowStep = 5;
-  if (switches & SW4) return;
-  if (step <= 10) {
-    int startCol = col - step;
-    int endCol = col + step;
-    int width = 1 + endCol - startCol;
-    // a color in this BGR encoding is BBBB BGGG GGGR RRRR
-    unsigned int color = (blue << 11) | (green << 5) | red;
-    blue++; blue &= 31;
-    green += 2; green &= 63;
-    fillRectangle(startCol, row+step, width, 1, color);
-    fillRectangle(startCol, row-step, width, 1, color);
-    if (switches & SW3) green = (green + 1) % 64;
-    if (switches & SW2) blue = (blue + 2) % 32;
-    if (switches & SW1) red = (red - 3) % 32;
-    step ++;
-  } else {
-    col+=colStep; row += rowStep;
-    if( col < 20 || col > (screenWidth - 10)){
-      col -= colStep; colStep = -colStep;
-    }
-    if(row < 20 || row > (screenHeight - 15)){
-      row -= rowStep; rowStep = -rowStep;
+  static char currStripeColor = 0; // 0 for red stripe or 1 for white
+  static char presentHeight = (screenWidth * 3) / 4;
+  static char openPresent = 0, openPresentStep = 0, songToggled = 0, stripeStep = 0;
+  static char rowStep = 0;
+  
+  int leftWallPos[2] = {col/4, row - 25}; // Position for present left wall
+  int rightWallPos[2] = { limits[0] + 16, row - 25}; // Position for present right wall
+  
+  if (switches & SW1) songToggled ^= 1; // Toggle song
+  if (switches & SW2) openPresent = 1; // Toggled open present
+  if (switches & SW3) draw_star(col, row, openPresent);
+  if (switches & SW4) {
+    openPresent = openPresentStep = rowStep = stripeStep = songToggled = blink_count = 0;
+    buzzer_off();
+    clearScreen(COLOR_BLACK);
+    return;
+  }
+  
+  if (songToggled) {  // Play happy bday song
+    play_happyBirthday(blink_count); 
+  } else { // Reset the counter and turn off buzzer
+    blink_count = 0;
+    buzzer_off();
+  }
+ 
+  // When open present animation is toggled
+  if(openPresent) {
+    // Draw left and right present wall
+    fillRectangle(leftWallPos[0], leftWallPos[1], 4, presentHeight, COLOR_RED);
+    fillRectangle(rightWallPos[0], rightWallPos[1], 4, presentHeight, COLOR_RED);
+    
+    // Use as black mask for present front face
+    if(openPresentStep <= presentHeight - 4) 
+      fillRectangle(leftWallPos[0] + 4, leftWallPos[1], presentHeight - 8, openPresentStep+=3, COLOR_BLACK);
+
+    // Open box flaps
+    if(rowStep < 30) {
+      open_top(leftWallPos, rightWallPos, presentHeight , rowStep);
+      rowStep += 3;
+    } else {
+      write_happyBday(col, row);
     }
     
-     clearScreen(COLOR_BLUE);
-     step = 0;
-  }
+  } else {
+    // Draw present with stripes
+    int startingCol = col / 4;
+    char color =  (currStripeColor) ? COLOR_WHITE : COLOR_RED;
+
+    drawString5x7(col - 25, 15, "PRESS S2", COLOR_GRAY, COLOR_BLACK); // First instructions
+    
+    if(stripeStep + 16 <= presentHeight){
+      fillRectangle(startingCol + stripeStep, row - 25, 16, presentHeight, color);
+      stripeStep += 16;
+      currStripeColor ^= 1;
+    } else {
+      fillRectangle(startingCol + (presentHeight - stripeStep), row - 25, 16, presentHeight, color); 
+    }
+    // Draw top of present
+    fillRectangle(leftWallPos[0] - 8, leftWallPos[1] - 16, presentHeight + 16, 16, COLOR_RED);
+  }// end of else
 }
 
+void draw_star(unsigned char col, unsigned char row, char openPresent)
+{
+  if(!openPresent) return; // If present is not open then dont draw the star
+  
+}
+
+/* Draw the box flaps and open them */
+void open_top(int leftWallPos[], int rightWallPos[], char presentHeight, char rowStep)
+{
+  fillRectangle(leftWallPos[0] - 8, leftWallPos[1] - rowStep, presentHeight + 16, 3, COLOR_BLACK);
+  fillRectangle(leftWallPos[0] - 8, leftWallPos[1] - 16 - rowStep, presentHeight + 16, 16, COLOR_RED);
+}
+
+/* Writes a happy birthday message on to the LCD */
+void write_happyBday(unsigned char col, unsigned char row)
+{
+  drawString5x7(col - 45 , row - 50, "Happy Birthday!", COLOR_WHITE, COLOR_BLACK);
+}
 
 /* Switch on S2 */
 void
