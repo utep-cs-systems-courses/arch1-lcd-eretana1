@@ -68,6 +68,7 @@ void wdt_c_handler()
 void update_shape();
 void draw_star(unsigned char col, unsigned char row, char openPresent);
 void open_top(int leftWallPos[], int rightWallPos[], char presentHeight, char rowStep);
+void clear_box(unsigned char col, unsigned char row);
 void write_happyBday(unsigned char col, unsigned char row);
 
 void main()
@@ -165,6 +166,48 @@ void draw_star(unsigned char col, unsigned char row, char openPresent)
 {
   if(!openPresent) return; // If present is not open then dont draw the star
   
+  static char blue = 31, green = 0, red = 31;
+  static char moveStep = 0;
+  static char isNeg = 0;
+  // a color in this BGR encoding is BBBB BGGG GGGR RRRR
+  unsigned int color = (blue << 11) | (green << 5) | red;
+
+  green = (green + 2) % 64;
+  blue = (blue + 4) % 32;
+  red = (red + 6) % 32;
+
+  // Keep track of whether to increment up or down
+  if(moveStep >=  30) isNeg = 1;
+  if(moveStep <= 0) isNeg = 0;
+
+  // Clear previous shape
+  for (int i = 0 ; i < 30; i++) {
+    for(int j = 0; j < i; j++) {
+      // Upside triangle
+      drawPixel(col - j, row + i + moveStep, COLOR_BLACK);
+      drawPixel(col + j, row + i + moveStep, COLOR_BLACK);
+      
+      // Downside triangle
+      drawPixel(col - j, row - i + 40 + moveStep, COLOR_BLACK);
+      drawPixel(col + j, row - i + 40 + moveStep, COLOR_BLACK);
+    }
+  }
+
+  // Update star step
+  if(isNeg) moveStep-=4;
+  else moveStep+=4;
+  
+  for (int i = 0 ; i < 30; i++) {
+    for(int j = 0; j < i; j++) {
+      // Upside triangle
+      drawPixel(col - j, row + i + moveStep, color);
+      drawPixel(col + j, row + i + moveStep, color);
+      
+      // Downside triangle
+      drawPixel(col - j, row - i + 40 + moveStep, color);
+      drawPixel(col + j, row - i + 40 + moveStep, color);
+    }
+  }
 }
 
 /* Draw the box flaps and open them */
