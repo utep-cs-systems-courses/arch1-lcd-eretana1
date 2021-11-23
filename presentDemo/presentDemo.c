@@ -68,7 +68,6 @@ void wdt_c_handler()
 void update_shape();
 void draw_star(unsigned char col, unsigned char row, char openPresent);
 void open_top(int leftWallPos[], int rightWallPos[], char presentHeight, char rowStep);
-void clear_box(unsigned char col, unsigned char row);
 void write_happyBday(unsigned char col, unsigned char row);
 
 void main()
