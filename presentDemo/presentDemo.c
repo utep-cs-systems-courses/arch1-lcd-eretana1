@@ -3,47 +3,10 @@
 #include "buzzer.h"
 #include "lcdutils.h"
 #include "lcddraw.h"
-
-// WARNING: LCD DISPLAY USES P1.0.  Do not touch!!! 
-
-#define LED BIT6		/* note that bit zero req'd for display */
-
-#define SW1 1
-#define SW2 2
-#define SW3 4
-#define SW4 8
-
-#define SWITCHES 15
-
-static char 
-switch_update_interrupt_sense()
-{
-  char p2val = P2IN;
-  /* update switch interrupt to detect changes from current buttons */
-  P2IES |= (p2val & SWITCHES);	/* if switch up, sense down */
-  P2IES &= (p2val | ~SWITCHES);	/* if switch down, sense up */
-  return p2val;
-}
-
-void 
-switch_init()			/* setup switch */
-{  
-  P2REN |= SWITCHES;		/* enables resistors for switches */
-  P2IE |= SWITCHES;		/* enable interrupts from switches */
-  P2OUT |= SWITCHES;		/* pull-ups for switches */
-  P2DIR &= ~SWITCHES;		/* set switches' bits for input */
-  switch_update_interrupt_sense();
-}
-
-int switches = 0;
-
-void
-switch_interrupt_handler()
-{
-  char p2val = switch_update_interrupt_sense();
-  switches = ~p2val & SWITCHES;
-}
-
+#include "led.h"
+#include "presentDemo.h"
+#include "switches.h"
+#include "stateMachines.h" 
 
 // axis zero for col, axis 1 for row
 short drawPos[2] = {10,10}, controlPos[2] = {10,10};
@@ -51,29 +14,42 @@ short velocity[2] = {3,8}, limits[2] = {screenWidth-36, screenHeight-8};
 
 short redrawScreen = 1;
 u_int controlFontColor = COLOR_GREEN;
+
+char songToggled = 0;
 int blink_count = 0;
+
 void wdt_c_handler()
 {
   static int secCount = 0;
-  if(SW1 & SWITCHES) blink_count++;
-  if (blink_count >= 4000) blink_count = 0;
+
+  // Check sw1 to enable state machine blinker
+  if(sw1_state_down){
+    state_advance(blink_count);
+    secCount = 25;
+    if (++blink_count >= 1000) blink_count = 0;
+  }else {
+
+    // Play happy birthday song
+    if(songToggled){
+      blink_count++;
+      play_happyBirthday(blink_count);
+      if(blink_count >= 4000) blink_count = 0; // Reset happy birthday song if over
+    } else {
+      blink_count = 0;
+    }
   
-  secCount ++;
-  if (secCount >= 25) {		/* 10/sec */
-    secCount = 0;
-    redrawScreen = 1;
+    secCount ++;
+    if (secCount >= 25) {		/* 10/sec */
+      secCount = 0;
+      redrawScreen = 1;
+    }
   }
 }
   
-void update_shape();
-void draw_star(unsigned char col, unsigned char row, char openPresent);
-void open_top(int leftWallPos[], int rightWallPos[], char presentHeight, char rowStep);
-void write_happyBday(unsigned char col, unsigned char row);
-
 void main()
 {
-  P1DIR |= LED;		/**< Green led on when CPU on */
-  P1OUT |= LED;
+  P1DIR |= LED_RED;		/**< red led on when CPU on */
+  P1OUT |= LED_RED;
   configureClocks();
   lcd_init();
   switch_init();
@@ -88,9 +64,9 @@ void main()
       redrawScreen = 0;
       update_shape();
     }
-    P1OUT &= ~LED;	/* led off */
+    P1OUT &= ~LED_RED;	/* led off */
     or_sr(0x10);	/**< CPU OFF */
-    P1OUT |= LED;	/* led on */
+    P1OUT |= LED_RED;	/* led on */
   }
 }
     
@@ -101,27 +77,22 @@ update_shape()
   static char blue = 31, green = 0, red = 31;
   static char currStripeColor = 0; // 0 for red stripe or 1 for white
   static char presentHeight = (screenWidth * 3) / 4;
-  static char openPresent = 0, openPresentStep = 0, songToggled = 0, stripeStep = 0;
+  static char openPresent = 0, openPresentStep = 0, stripeStep = 0;
   static char rowStep = 0;
   
   int leftWallPos[2] = {col/4, row - 25}; // Position for present left wall
   int rightWallPos[2] = { limits[0] + 16, row - 25}; // Position for present right wall
   
-  if (switches & SW1) songToggled ^= 1; // Toggle song
-  if (switches & SW2) openPresent = 1; // Toggled open present
-  if (switches & SW3) draw_star(col, row, openPresent);
-  if (switches & SW4) {
+  if (sw2_state_down) {
+    openPresent = 1; // Toggled open present
+    songToggled = 1;
+  }
+  if (sw3_state_down) draw_star(col, row, openPresent);
+  if (sw4_state_down) {
     openPresent = openPresentStep = rowStep = stripeStep = songToggled = blink_count = 0;
     buzzer_off();
     clearScreen(COLOR_BLACK);
     return;
-  }
-  
-  if (songToggled) {  // Play happy bday song
-    play_happyBirthday(blink_count); 
-  } else { // Reset the counter and turn off buzzer
-    blink_count = 0;
-    buzzer_off();
   }
  
   // When open present animation is toggled
@@ -220,13 +191,4 @@ void open_top(int leftWallPos[], int rightWallPos[], char presentHeight, char ro
 void write_happyBday(unsigned char col, unsigned char row)
 {
   drawString5x7(col - 45 , row - 50, "Happy Birthday!", COLOR_WHITE, COLOR_BLACK);
-}
-
-/* Switch on S2 */
-void
-__interrupt_vec(PORT2_VECTOR) Port_2(){
-  if (P2IFG & SWITCHES) {	      /* did a button cause this interrupt? */
-    P2IFG &= ~SWITCHES;		      /* clear pending sw interrupts */
-    switch_interrupt_handler();	/* single handler for all switches */
-  }
 }
