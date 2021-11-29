@@ -60,6 +60,7 @@ void drawChar5x7(u_char rcol, u_char rrow, char c,
   u_char oc = c - 0x20;
 
   lcd_setArea(rcol, rrow, rcol + 4, rrow + 7); /* relative to requested col/row */
+
   while (row < 8) {
     while (col < 5) {
       u_int colorBGR = (font_5x7[oc][col] & bit) ? fgColorBGR : bgColorBGR;
@@ -68,6 +69,31 @@ void drawChar5x7(u_char rcol, u_char rrow, char c,
     }
     col = 0;
     bit <<= 1;
+    row++;
+  }
+}
+
+/** 8x12 font -
+ * This function draws background pixels
+ */
+void drawChar8x12(u_char rcol, u_char rrow, char c, 
+     u_int fgColorBGR, u_int bgColorBGR) 
+{
+  u_char col = 0;
+  u_char row = 0;
+  unsigned char bit = 0x80;
+  u_char oc = c - 0x20;
+
+  lcd_setArea(rcol, rrow, rcol + 7, rrow + 12); /* relative to requested col/row */
+  while (row < 13) {
+    while( col < 8){
+      u_int colorBGR = (font_8x12[oc][row] & bit) ? fgColorBGR : bgColorBGR;
+      lcd_writeColor(colorBGR);
+      col++;
+      bit >>= 1;
+    }
+    bit = 0x80;
+    col = 0;
     row++;
   }
 }
@@ -94,6 +120,15 @@ void drawString5x7(u_char col, u_char row, char *string,
   }
 }
 
+void drawString8x12(u_char col, u_char row, char *string,
+		u_int fgColorBGR, u_int bgColorBGR)
+{
+  u_char cols = col;
+  while (*string) {
+    drawChar8x12(cols, row, *string++, fgColorBGR, bgColorBGR);
+    cols += 9;
+  }
+}
 
 /** Draw rectangle outline
  *  
@@ -114,4 +149,3 @@ void drawRectOutline(u_char colMin, u_char rowMin, u_char width, u_char height,
   fillRectangle(colMin, rowMin, 1, height, colorBGR);
   fillRectangle(colMin + width, rowMin, 1, height, colorBGR);
 }
-
