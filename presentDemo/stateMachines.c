@@ -1,6 +1,7 @@
 #include <msp430.h>
 #include "stateMachines.h"
 #include "led.h"
+#include "light25-assy.h"
 
 // global states to control blinking
 int intensity_state = 0;
@@ -23,24 +24,6 @@ char light_intensity_state(int blink_count)
     intensity_state = (intensity_state % 4) + 1;
   }
   return intensity_state;
-}
-
-// Function to set light intesity to 25%
-void light_25(int state)
-{
-  switch(state){
-  case 0:
-  case 1:
-  case 2: 
-    P1OUT &= ~LED_GREEN;
-    P1OUT |= LED_RED;
-    break;
-  case 3:
-    P1OUT |= LED_GREEN;
-    P1OUT &= ~LED_RED;
-  default:
-    break;
-  }
 }
 
 // Function to set light intesity to 50%

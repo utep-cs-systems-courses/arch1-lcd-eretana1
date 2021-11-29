@@ -190,5 +190,5 @@ void open_top(int leftWallPos[], int rightWallPos[], char presentHeight, char ro
 /* Writes a happy birthday message on to the LCD */
 void write_happyBday(unsigned char col, unsigned char row)
 {
-  drawString5x7(col - 45 , row - 50, "Happy Birthday!", COLOR_WHITE, COLOR_BLACK);
+  drawString8x12(0 , row - 50, "Happy Birthday", COLOR_WHITE, COLOR_BLACK);
 }

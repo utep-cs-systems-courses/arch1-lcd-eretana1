@@ -1,0 +1,6 @@
+#ifndef led25_assy_included
+#define led25_assy_included
+
+void light_25(int state);
+
+#endinf

@@ -18,6 +18,8 @@ main()
 
   drawString5x7(20,20, "hello", COLOR_GREEN, COLOR_RED);
 
-  fillRectangle(30,30, 60, 60, COLOR_ORANGE);
+  //fillRectangle(30,30, 60, 60, COLOR_ORANGE);
+
+  drawString8x12(20, 40, "happy birthday", COLOR_WHITE, COLOR_RED);
   
 }
