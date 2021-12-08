@@ -24,7 +24,7 @@ load-s: presentDemo-s.elf
 	msp430loader.sh $^
 
 clean:
-	rm -f *.o *.elf
+	rm -f *.o *.s~ *.s# *.elf
 
 buzzer.o: buzzer.h
 led.o: led.h 

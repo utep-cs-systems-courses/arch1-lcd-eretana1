@@ -2,12 +2,12 @@
 	.p2align 1,0
 	.text
 
-jt:
-	.word default		;jt[0]
-	.word case0		;jt[1]
-	.word case1		;jt[2]
-	.word case2		;jt[3]
-	.word case3		;jt[4]
+jt:		
+	.word case0		;jt[0]
+	.word case1		;jt[1]
+	.word case2		;jt[2]
+	.word case3		;jt[3]
+	.word default		;jt[4]
 	
 	.global light_25
 	.extern P1OUT
