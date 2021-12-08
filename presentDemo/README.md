@@ -22,12 +22,9 @@ Each switch is mapped to a specific function, which utilizes interrupts to read 
 Button      | Description
 ----------- | ---------------
 Switch S1   | State machine for the LEDs that flashes and dims green and red LEDs. The green LED will decrease light intensity in 25% decrements, and the red light will act as the inverse of the green led.
-Switch S2   | Enables the buzzer and plays the happy birthday song. The
-present will open up and display a message.
-Switch S3   | Draws a self-made start that changes colors and bounces up and
-down inside of the "present". Calling `make load` will compile code in C - `make load-s` will compile code in ASSY.
-Switch S4   | Reset button for any switch. (Disables buzzer and turns off LEDs
-/ resets present).
+Switch S2   | Enables the buzzer and plays the happy birthday song. The present will open up and display a message.
+Switch S3   | Draws a self-made start that changes colors and bounces up and down inside of the "present". Calling `make load` will compile code in C - `make load-s` will compile code in ASSY.
+Switch S4   | Reset button for any switch. (Disables buzzer and turns off LEDs / resets present).
 
 ## How to Use
 
